@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Silk Road</title>
+
+    <link rel="stylesheet" href="../static/style.css" />
+  </head>
+
+  <body>
+    <header>
+      <nav>
+        <button onclick="abrirPopup()">Preferências</button>
+
+        <a
+          href="https://mateusrmelo-collab.github.io/DevMateus"
+          target="_blank"
+        >
+          <button>Créditos</button>
+        </a>
+      </nav>
+    </header>
+
+    <div class="card">
+      <h1>O que você deseja baixar?</h1>
+
+      <div id="selecionado">Nenhuma opção selecionada</div>
+
+      <div class="escolha">
+        <div class="opcao" onclick="selecionar('video', this)">
+          <h2>Vídeo</h2>
+        </div>
+
+        <div class="opcao" onclick="selecionar('audio', this)">
+          <h2>Áudio</h2>
+        </div>
+      </div>
+
+      <div id="formulario" style="display: none">
+        <input id="url" placeholder="Cole o link aqui" />
+        <div class="d">
+          <button class="btn-baixar" onclick="baixar()">Baixar</button>
+        </div>
+      </div>
+
+      <div id="status"></div>
+    </div>
+
+    <div class="popup" id="popup">
+      <div class="popup-box">
+        <h3>Preferências</h3>
+
+        <div class="switch-row">
+          <span>Modo escuro</span>
+
+          <div class="switch" onclick="toggleTema()">
+            <div class="knob"></div>
+          </div>
+        </div>
+
+        <button class="close" onclick="fecharPopup()">Fechar</button>
+      </div>
+    </div>
+
+    <script>
+      let tipoSelecionado = null;
+
+      function aplicarTemaSalvo() {
+        const tema = localStorage.getItem("tema");
+
+        if (tema === "dark") {
+          document.body.classList.add("dark");
+        }
+      }
+
+      function toggleTema() {
+        document.body.classList.toggle("dark");
+
+        if (document.body.classList.contains("dark")) {
+          localStorage.setItem("tema", "dark");
+        } else {
+          localStorage.setItem("tema", "light");
+        }
+      }
+
+      aplicarTemaSalvo();
+
+      function selecionar(tipo, el) {
+        tipoSelecionado = tipo;
+
+        document.getElementById("formulario").style.display = "flex";
+
+        document
+          .querySelectorAll(".opcao")
+          .forEach((o) => o.classList.remove("ativa"));
+
+        el.classList.add("ativa");
+
+        document.getElementById("selecionado").innerText =
+          tipo === "video" ? "Vídeo selecionado" : "Áudio selecionado";
+      }
+
+      function abrirPopup() {
+        document.getElementById("popup").style.display = "flex";
+      }
+
+      function fecharPopup() {
+        document.getElementById("popup").style.display = "none";
+      }
+
+      async function baixar() {
+        const url = document.getElementById("url").value;
+        const status = document.getElementById("status");
+
+        if (!url) {
+          status.innerText = "Cole um link primeiro.";
+          return;
+        }
+
+        if (!tipoSelecionado) {
+          status.innerText = "Escolha vídeo ou áudio.";
+          return;
+        }
+
+        status.innerText = "Processando download...";
+
+        const form = new FormData();
+        form.append("url", url);
+        form.append("tipo", tipoSelecionado);
+
+        try {
+          const resposta = await fetch("/baixar", {
+            method: "POST",
+            body: form,
+          });
+
+          if (!resposta.ok) {
+            status.innerText = "Erro ao baixar.";
+            return;
+          }
+
+          const blob = await resposta.blob();
+
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+
+          a.href = downloadUrl;
+          a.download = tipoSelecionado === "audio" ? "audio.mp3" : "video.mp4";
+
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+
+          window.URL.revokeObjectURL(downloadUrl);
+
+          status.innerText = "Download iniciado!";
+        } catch (e) {
+          console.log(e);
+          status.innerText = "Erro ao conectar ao servidor.";
+        }
+      }
+    </script>
+  </body>
+</html>
