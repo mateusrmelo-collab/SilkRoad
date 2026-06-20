@@ -7,6 +7,7 @@ app = Flask(__name__)
 
 DOWNLOAD_DIR = "/tmp"
 
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -24,36 +25,41 @@ def baixar():
     base_path = os.path.join(DOWNLOAD_DIR, uid)
 
     try:
+        ydl_opts = {
+            "outtmpl": base_path + ".%(ext)s",
+            "quiet": True,
+            "cookiefile": "cookies.txt",
+        }
+
         if tipo == "audio":
-            ydl_opts = {
+            ydl_opts.update({
                 "format": "bestaudio/best",
-                "outtmpl": base_path + ".%(ext)s",
                 "postprocessors": [{
                     "key": "FFmpegExtractAudio",
                     "preferredcodec": "mp3",
                     "preferredquality": "192",
                 }],
-                "quiet": True,
-            }
+            })
         else:
-            ydl_opts = {
+            ydl_opts.update({
                 "format": "best[ext=mp4]/best",
-                "outtmpl": base_path + ".%(ext)s",
-                "quiet": True,
-            }
+            })
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
 
-        filename = ydl.prepare_filename(info)
+            filename = None
 
-        if tipo == "audio":
-            filename = os.path.splitext(filename)[0] + ".mp3"
+            if "requested_downloads" in info:
+                filename = info["requested_downloads"][0]["filepath"]
+
+            if not filename:
+                filename = ydl.prepare_filename(info)
 
         @after_this_request
         def cleanup(response):
             try:
-                if os.path.exists(filename):
+                if filename and os.path.exists(filename):
                     os.remove(filename)
             except:
                 pass
@@ -63,7 +69,3 @@ def baixar():
 
     except Exception as e:
         return f"Erro: {str(e)}", 500
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
