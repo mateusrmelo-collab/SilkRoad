@@ -136,7 +136,8 @@
           });
 
           if (!resposta.ok) {
-            status.innerText = "Erro ao baixar.";
+            const erro = await resposta.text();
+            status.innerText = `Erro: ${erro}`;
             return;
           }
 
