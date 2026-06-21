@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, send_file, after_this_request
+from flask import Flask, render_template, request, send_file
 import yt_dlp
 import os
 import uuid
@@ -27,8 +27,8 @@ def baixar():
     try:
         ydl_opts = {
             "outtmpl": base_path + ".%(ext)s",
-            "quiet": True,
-            "cookiefile": "cookies.txt",
+            "quiet": False,
+            "noplaylist": True,
         }
 
         if tipo == "audio":
@@ -48,24 +48,19 @@ def baixar():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
 
-            filename = None
+            filename = ydl.prepare_filename(info)
 
-            if "requested_downloads" in info:
-                filename = info["requested_downloads"][0]["filepath"]
+            if tipo == "audio":
+                filename = os.path.splitext(filename)[0] + ".mp3"
 
-            if not filename:
-                filename = ydl.prepare_filename(info)
-
-        @after_this_request
-        def cleanup(response):
-            try:
-                if filename and os.path.exists(filename):
-                    os.remove(filename)
-            except:
-                pass
-            return response
+        if not os.path.exists(filename):
+            return "Falha no download", 500
 
         return send_file(filename, as_attachment=True)
 
     except Exception as e:
         return f"Erro: {str(e)}", 500
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
