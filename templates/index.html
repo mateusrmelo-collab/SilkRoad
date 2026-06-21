@@ -136,8 +136,7 @@
           });
 
           if (!resposta.ok) {
-            const erro = await resposta.text();
-            status.innerText = `Erro: ${erro}`;
+            status.innerText = "Erro ao baixar(Downloads do YouTube estão temporariamente indisponíveis).";
             return;
           }
 
